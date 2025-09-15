@@ -1,8 +1,13 @@
 
 package br.com.mariojp.figureeditor;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
@@ -10,12 +15,15 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JPanel;
+
 class DrawingPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
     private static final int DEFAULT_SIZE = 60;
     private final List<Shape> shapes = new ArrayList<>();
     private Point startDrag = null;
+    private Point currentDrag = null;
 
     DrawingPanel() {
         
@@ -24,14 +32,36 @@ class DrawingPanel extends JPanel {
         setDoubleBuffered(true);
 
         var mouse = new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 1 && startDrag == null) {
-                    int size = Math.max(Math.min(DEFAULT_SIZE, DEFAULT_SIZE), 10);
-                    Shape s =  new Ellipse2D.Double(e.getPoint().x, e.getPoint().y, size, size);
-                    //return new Rectangle2D.Double(e.getPoint().x, e.getPoint().y, Math.max(DEFAULT_SIZE, 10), Math.max(DEFAULT_SIZE, 10));
-                    shapes.add(s);
-                    repaint();
+            @Override public void mousePressed(MouseEvent e) {
+               startDrag = e.getPoint();
+               currentDrag = null;
                 }
+
+                @Override
+                public void mouseReleased(MouseEvent e){
+                    if (startDrag != null){
+                        int x = Math.min(startDrag.x, e.getX());
+                        int y = Math.min(startDrag.y, e.getY());
+                        int w = Math.abs(e.getX() - startDrag.x);
+                        int h = Math.abs(e.getY() - startDrag.y);
+
+                        Shape s;
+                        if (w < 5 || h <5) {
+                            int size = DEFAULT_SIZE;
+                            s = new Ellipse2D.Double(e.getX(), e.getY(), size, size);
+                        }else{
+                            s = new Rectangle2D.Double(x,y,w,h);
+                        }
+                        shapes.add(s);
+                        startDrag = null;
+                        currentDrag = null;
+                        repaint();
+                    }
+                }
+            @Override
+            public void mouseDragged(MouseEvent e){
+                currentDrag = e.getPoint();
+                repaint();
             }
         };
         addMouseListener(mouse);        
@@ -57,7 +87,21 @@ class DrawingPanel extends JPanel {
             g2.draw(s);
         }
 
+        if (startDrag != null && currentDrag != null){
+            int x = Math.min(startDrag.x, currentDrag.x);
+            int y = Math.min(startDrag.y, currentDrag.y);
+            int w = Math.abs(currentDrag.x - startDrag.x);
+            int h = Math.abs(currentDrag.y - startDrag.y);
+
+            g2.setColor(Color.GRAY);
+            float dash[] = {5.0f};
+            g2.setStroke(new BasicStroke(1.0f,
+            BasicStroke.CAP_BUTT,
+            BasicStroke.JOIN_BEVEL,
+            0,dash,0));
+            g2.drawRect(x,y,w,h);
+        }
         g2.dispose();
     }
-
 }
+
